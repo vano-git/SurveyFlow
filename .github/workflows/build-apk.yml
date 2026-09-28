@@ -1,10 +1,12 @@
-name: Build Universal Android APK
+name: Build Universal Android APK & Publish Release
 
 on:
   push:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
@@ -15,9 +17,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Build & Test Universal APK
+    name: Build Universal APK
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -36,32 +41,49 @@ jobs:
       - name: Prepare Build Environment
         run: |
           chmod +x ./gradlew
-          # Ensure .env file exists for secrets-gradle-plugin
+          # Ensure .env exists for secrets plugin
           if [ ! -f .env ]; then
             cp .env.example .env || touch .env
           fi
-          # Restore debug keystore from base64 if present
+          # Restore debug keystore from base64
           if [ -f debug.keystore.base64 ]; then
             base64 -d debug.keystore.base64 > debug.keystore
           fi
 
       - name: Run Unit & Robolectric Tests
-        run: ./gradlew :app:testDebugUnitTest --no-daemon
+        run: ./gradlew :app:testDebugUnitTest
 
-      - name: Build Universal Debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Build Universal Android APK
+        run: ./gradlew :app:assembleDebug --stacktrace
 
-      - name: Package Universal APK
+      - name: Stage APK Files
         run: |
           mkdir -p output-apk
           if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk output-apk/SurveyFlow-universal-debug.apk
+            cp app/build/outputs/apk/debug/app-debug.apk output-apk/SurveyFlow-universal-app.apk
           fi
 
-      - name: Upload APK Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SurveyFlow-universal-debug-apk
-          path: output-apk/SurveyFlow-universal-debug.apk
+          name: SurveyFlow-universal-app
+          path: output-apk/SurveyFlow-universal-app.apk
           retention-days: 30
           if-no-files-found: error
+
+      - name: Publish to GitHub Releases
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [[ "$TAG_NAME" == "main" || "$TAG_NAME" == "master" ]]; then
+            TAG_NAME="v1.0.${{ github.run_number }}"
+          fi
+          RELEASE_TITLE="SurveyFlow Release $TAG_NAME"
+          
+          echo "Publishing release $TAG_NAME..."
+          gh release create "$TAG_NAME" output-apk/SurveyFlow-universal-app.apk \
+            --title "$RELEASE_TITLE" \
+            --notes "Automated build of SurveyFlow offline Likert questionnaire app. Download **SurveyFlow-universal-app.apk** below to install directly on your Android device." \
+            --generate-notes || true

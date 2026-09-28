@@ -47,15 +47,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Answer
@@ -70,8 +71,7 @@ import com.example.ui.components.SliderSelector
 import com.example.ui.components.TextInputSelector
 import com.example.ui.viewmodel.ActiveSurveyState
 import com.example.ui.viewmodel.SurveyViewModel
-import com.example.util.AppLanguage
-import com.example.util.Strings
+import com.example.util.TextDirectionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,10 +80,8 @@ fun SurveyFillingScreen(
     viewModel: SurveyViewModel,
     modifier: Modifier = Modifier
 ) {
-    val appLanguage by viewModel.appLanguage.collectAsState()
-
     BackHandler {
-        viewModel.promptCancelSurvey()
+        viewModel.promptExitSurvey()
     }
 
     val questions = state.definition.questions
@@ -94,6 +92,18 @@ fun SurveyFillingScreen(
     val progress = (currentIndex + 1).toFloat() / totalCount.toFloat()
     val isLastQuestion = currentIndex == totalCount - 1
     val isFirstQuestion = currentIndex == 0
+
+    // Auto-detect direction of current question: Persian -> RTL, English -> LTR
+    val questionDirection = TextDirectionHelper.getLayoutDirection(currentQuestion.text, currentQuestion.description)
+    val isRtl = questionDirection == LayoutDirection.Rtl
+
+    // Smooth scroll state
+    val scrollState = rememberScrollState()
+
+    // Smoothly animate scroll to top whenever the question changes
+    LaunchedEffect(currentIndex) {
+        scrollState.animateScrollTo(0)
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -109,8 +119,7 @@ fun SurveyFillingScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = Strings.questionCounter(appLanguage, currentIndex + 1, totalCount) +
-                                        " • " + Strings.answeredCount(appLanguage, answeredCount, totalCount),
+                                text = "Question ${currentIndex + 1} of $totalCount • $answeredCount answered",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -118,12 +127,12 @@ fun SurveyFillingScreen(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = { viewModel.promptCancelSurvey() },
+                            onClick = { viewModel.promptExitSurvey() },
                             modifier = Modifier.testTag("exit_survey_icon")
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = Strings.exit(appLanguage)
+                                contentDescription = "Exit Survey"
                             )
                         }
                     },
@@ -207,7 +216,7 @@ fun SurveyFillingScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(Strings.previous(appLanguage), fontWeight = FontWeight.SemiBold)
+                            Text("Previous", fontWeight = FontWeight.SemiBold)
                         }
 
                         Spacer(modifier = Modifier.width(12.dp))
@@ -229,7 +238,7 @@ fun SurveyFillingScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(Strings.submitSurvey(appLanguage), fontWeight = FontWeight.Bold)
+                                Text("Submit Survey", fontWeight = FontWeight.Bold)
                             }
                         } else {
                             Button(
@@ -239,7 +248,7 @@ fun SurveyFillingScreen(
                                     .height(50.dp)
                                     .testTag("survey_next_button")
                             ) {
-                                Text(Strings.next(appLanguage), fontWeight = FontWeight.SemiBold)
+                                Text("Next", fontWeight = FontWeight.SemiBold)
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -257,7 +266,7 @@ fun SurveyFillingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
             // Validation alert
@@ -287,7 +296,7 @@ fun SurveyFillingScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = Strings.answerRequiredAlert(appLanguage),
+                            text = if (isRtl) "لطفاً پیش از ادامه، به این سؤال الزامی پاسخ دهید." else "Please provide an answer before continuing.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -295,166 +304,171 @@ fun SurveyFillingScreen(
                 }
             }
 
-            // Question Header Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(6.dp)
+            // Question Header Card with RTL/LTR support
+            CompositionLocalProvider(LocalLayoutDirection provides questionDirection) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = Strings.questionCounter(appLanguage, currentIndex + 1, totalCount),
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        if (currentQuestion.required) {
                             Surface(
-                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                                color = MaterialTheme.colorScheme.primaryContainer,
                                 shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
-                                    text = Strings.requiredField(appLanguage),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    text = if (isRtl) "سؤال ${currentIndex + 1} از $totalCount" else "Question ${currentIndex + 1} of $totalCount",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
-                        } else {
+
+                            if (currentQuestion.required) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = if (isRtl) "الزامی" else "Required",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = if (isRtl) "اختیاری" else "Optional",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = currentQuestion.text,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                lineHeight = 28.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (!currentQuestion.description.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = Strings.optionalField(appLanguage),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = currentQuestion.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = currentQuestion.text,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 28.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    if (!currentQuestion.description.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = currentQuestion.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             }
 
-            // Input / Scale Answer Section
+            // Input / Scale Answer Section with RTL/LTR support
             val currentAnswer = state.answers[currentQuestion.id]
 
-            when (currentQuestion.type) {
-                QuestionType.LIKERT -> {
-                    // Provide default Persian labels if Persian language and questionnaire hasn't defined custom labels
-                    val likertConfig = currentQuestion.likertConfig ?: LikertScaleConfig(points = 5)
-                    val resolvedConfig = if (appLanguage == AppLanguage.PERSIAN && likertConfig.labels.isEmpty()) {
-                        if (likertConfig.points == 7) {
-                            likertConfig.copy(labels = Strings.LIKERT_7_FA)
+            CompositionLocalProvider(LocalLayoutDirection provides questionDirection) {
+                when (currentQuestion.type) {
+                    QuestionType.LIKERT -> {
+                        val likertConfig = currentQuestion.likertConfig ?: LikertScaleConfig(points = 5)
+                        val resolvedConfig = if (isRtl && likertConfig.labels.isEmpty()) {
+                            if (likertConfig.points == 7) {
+                                likertConfig.copy(labels = listOf("کاملاً مخالف", "مخالف", "تا حدی مخالف", "خنثی", "تا حدی موافق", "موافق", "کاملاً موافق"))
+                            } else {
+                                likertConfig.copy(labels = listOf("کاملاً مخالف", "مخالف", "خنثی / ممتنع", "موافق", "کاملاً موافق"))
+                            }
                         } else {
-                            likertConfig.copy(labels = Strings.LIKERT_5_FA)
+                            likertConfig
                         }
-                    } else {
-                        likertConfig
+
+                        LikertSelector(
+                            config = resolvedConfig,
+                            currentAnswer = currentAnswer as? Answer.Likert,
+                            onAnswerSelected = { ans ->
+                                viewModel.setAnswer(currentQuestion.id, ans)
+                            }
+                        )
                     }
 
-                    LikertSelector(
-                        config = resolvedConfig,
-                        currentAnswer = currentAnswer as? Answer.Likert,
-                        onAnswerSelected = { ans ->
-                            viewModel.setAnswer(currentQuestion.id, ans)
-                        }
-                    )
-                }
+                    QuestionType.SINGLE_CHOICE -> {
+                        SingleChoiceSelector(
+                            options = currentQuestion.options,
+                            currentAnswer = currentAnswer as? Answer.SingleChoice,
+                            onAnswerSelected = { ans ->
+                                viewModel.setAnswer(currentQuestion.id, ans)
+                            }
+                        )
+                    }
 
-                QuestionType.SINGLE_CHOICE -> {
-                    SingleChoiceSelector(
-                        options = currentQuestion.options,
-                        currentAnswer = currentAnswer as? Answer.SingleChoice,
-                        onAnswerSelected = { ans ->
-                            viewModel.setAnswer(currentQuestion.id, ans)
-                        }
-                    )
-                }
+                    QuestionType.MULTI_CHOICE -> {
+                        MultiChoiceSelector(
+                            options = currentQuestion.options,
+                            currentAnswer = currentAnswer as? Answer.MultiChoice,
+                            onAnswerSelected = { ans ->
+                                viewModel.setAnswer(currentQuestion.id, ans)
+                            }
+                        )
+                    }
 
-                QuestionType.MULTI_CHOICE -> {
-                    MultiChoiceSelector(
-                        options = currentQuestion.options,
-                        currentAnswer = currentAnswer as? Answer.MultiChoice,
-                        onAnswerSelected = { ans ->
-                            viewModel.setAnswer(currentQuestion.id, ans)
-                        }
-                    )
-                }
+                    QuestionType.RATING -> {
+                        RatingSelector(
+                            minRating = currentQuestion.minRating,
+                            maxRating = currentQuestion.maxRating,
+                            currentAnswer = currentAnswer as? Answer.Rating,
+                            onAnswerSelected = { ans ->
+                                viewModel.setAnswer(currentQuestion.id, ans)
+                            }
+                        )
+                    }
 
-                QuestionType.RATING -> {
-                    RatingSelector(
-                        minRating = currentQuestion.minRating,
-                        maxRating = currentQuestion.maxRating,
-                        currentAnswer = currentAnswer as? Answer.Rating,
-                        onAnswerSelected = { ans ->
-                            viewModel.setAnswer(currentQuestion.id, ans)
-                        }
-                    )
-                }
+                    QuestionType.SLIDER -> {
+                        SliderSelector(
+                            min = currentQuestion.sliderMin,
+                            max = currentQuestion.sliderMax,
+                            step = currentQuestion.sliderStep,
+                            unit = currentQuestion.sliderUnit,
+                            currentAnswer = currentAnswer as? Answer.Slider,
+                            onAnswerSelected = { ans ->
+                                viewModel.setAnswer(currentQuestion.id, ans)
+                            }
+                        )
+                    }
 
-                QuestionType.SLIDER -> {
-                    SliderSelector(
-                        min = currentQuestion.sliderMin,
-                        max = currentQuestion.sliderMax,
-                        step = currentQuestion.sliderStep,
-                        unit = currentQuestion.sliderUnit,
-                        currentAnswer = currentAnswer as? Answer.Slider,
-                        onAnswerSelected = { ans ->
-                            viewModel.setAnswer(currentQuestion.id, ans)
-                        }
-                    )
-                }
+                    QuestionType.BOOLEAN -> {
+                        BooleanSelector(
+                            currentAnswer = currentAnswer as? Answer.BooleanAnswer,
+                            onAnswerSelected = { ans ->
+                                viewModel.setAnswer(currentQuestion.id, ans)
+                            },
+                            yesLabel = if (isRtl) "بله" else "Yes",
+                            noLabel = if (isRtl) "خیر" else "No"
+                        )
+                    }
 
-                QuestionType.BOOLEAN -> {
-                    BooleanSelector(
-                        currentAnswer = currentAnswer as? Answer.BooleanAnswer,
-                        onAnswerSelected = { ans ->
-                            viewModel.setAnswer(currentQuestion.id, ans)
-                        },
-                        yesLabel = Strings.yes(appLanguage),
-                        noLabel = Strings.no(appLanguage)
-                    )
-                }
-
-                QuestionType.TEXT -> {
-                    TextInputSelector(
-                        placeholder = currentQuestion.placeholder ?: if (appLanguage == AppLanguage.PERSIAN) "پاسخ خود را اینجا بنویسید..." else "Type your response here...",
-                        currentAnswer = currentAnswer as? Answer.Text,
-                        onAnswerSelected = { ans ->
-                            viewModel.setAnswer(currentQuestion.id, ans)
-                        }
-                    )
+                    QuestionType.TEXT -> {
+                        TextInputSelector(
+                            placeholder = currentQuestion.placeholder ?: if (isRtl) "پاسخ خود را اینجا بنویسید..." else "Type your response here...",
+                            currentAnswer = currentAnswer as? Answer.Text,
+                            onAnswerSelected = { ans ->
+                                viewModel.setAnswer(currentQuestion.id, ans)
+                            }
+                        )
+                    }
                 }
             }
 
@@ -462,23 +476,23 @@ fun SurveyFillingScreen(
         }
     }
 
-    // Cancel prompt dialog
+    // Cancel prompt dialog (English)
     if (state.showExitConfirm) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissExitDialog() },
-            title = { Text(Strings.exitSurveyPromptTitle(appLanguage)) },
-            text = { Text(Strings.exitSurveyPromptDesc(appLanguage)) },
+            title = { Text("Exit Survey?") },
+            text = { Text("Your current progress will not be saved.") },
             confirmButton = {
                 Button(
                     onClick = { viewModel.confirmExitSurvey() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(Strings.exit(appLanguage))
+                    Text("Exit")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissExitDialog() }) {
-                    Text(Strings.keepEditing(appLanguage))
+                    Text("Keep Editing")
                 }
             }
         )

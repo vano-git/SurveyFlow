@@ -1,13 +1,14 @@
 package com.example
 
 import android.content.Context
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.core.app.ApplicationProvider
 import com.example.model.JsonParser
 import com.example.model.QuestionResponseItem
 import com.example.model.SubmissionRecord
-import com.example.util.AppLanguage
-import com.example.util.Strings
+import com.example.util.TextDirectionHelper
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -46,13 +47,14 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `verify localization dictionary`() {
-        assertEquals("سِروِی‌فلو", Strings.appName(AppLanguage.PERSIAN))
-        assertEquals("SurveyFlow", Strings.appName(AppLanguage.ENGLISH))
-        assertEquals("بایگانی", Strings.tabArchive(AppLanguage.PERSIAN))
-        assertEquals("Archive", Strings.tabArchive(AppLanguage.ENGLISH))
-        assertEquals("الگوها", Strings.tabPresets(AppLanguage.PERSIAN))
-        assertEquals("Presets", Strings.tabPresets(AppLanguage.ENGLISH))
+    fun `verify TextDirectionHelper detects Persian RTL and English LTR`() {
+        assertTrue(TextDirectionHelper.isRtlText("ارزیابی روزانه سلامت و تمرکز"))
+        assertTrue(TextDirectionHelper.isRtlText("کاملاً موافق"))
+        assertFalse(TextDirectionHelper.isRtlText("Daily Well-Being Check-in"))
+        assertFalse(TextDirectionHelper.isRtlText("Strongly Agree"))
+
+        assertEquals(LayoutDirection.Rtl, TextDirectionHelper.getLayoutDirection("ارزیابی روزانه"))
+        assertEquals(LayoutDirection.Ltr, TextDirectionHelper.getLayoutDirection("Daily Well-Being"))
     }
 
     @Test

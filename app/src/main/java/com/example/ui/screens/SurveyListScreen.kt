@@ -4,7 +4,6 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,17 +19,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PostAdd
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +49,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,30 +57,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.data.db.SurveyEntity
 import com.example.ui.viewmodel.AppScreen
 import com.example.ui.viewmodel.SurveyViewModel
-import com.example.util.AppLanguage
-import com.example.util.Strings
+import com.example.util.TextDirectionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SurveyListScreen(
     viewModel: SurveyViewModel,
+    isDarkTheme: Boolean,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val surveys by viewModel.surveys.collectAsState()
     val responses by viewModel.responses.collectAsState()
-    val appLanguage by viewModel.appLanguage.collectAsState()
+    val listState = rememberLazyListState()
 
     var surveyToDelete by remember { mutableStateOf<SurveyEntity?>(null) }
 
@@ -110,44 +110,27 @@ fun SurveyListScreen(
                 title = {
                     Column {
                         Text(
-                            text = Strings.appName(appLanguage),
+                            text = "SurveyFlow",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                         )
                         Text(
-                            text = Strings.surveysSubtitle(appLanguage, surveys.size),
+                            text = "${surveys.size} active questionnaires",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 actions = {
-                    // Language Switcher button
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable { viewModel.toggleLanguage() }
-                            .testTag("language_toggle_button")
+                    // Light / Dark Theme toggle button
+                    IconButton(
+                        onClick = { viewModel.toggleTheme() },
+                        modifier = Modifier.testTag("theme_toggle_button")
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Translate,
-                                contentDescription = "Language",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (appLanguage == AppLanguage.PERSIAN) "فارسی" else "English",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDarkTheme) "Switch to Light Mode" else "Switch to Dark Mode",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
 
                     IconButton(
@@ -156,7 +139,7 @@ fun SurveyListScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.PostAdd,
-                            contentDescription = Strings.tabPresets(appLanguage)
+                            contentDescription = "Presets"
                         )
                     }
                 },
@@ -170,7 +153,7 @@ fun SurveyListScreen(
                 onClick = { importFileLauncher.launch(arrayOf("application/json", "text/*")) },
                 modifier = Modifier.testTag("import_json_fab"),
                 icon = { Icon(Icons.Default.FileUpload, contentDescription = null) },
-                text = { Text(Strings.importJsonButton(appLanguage)) }
+                text = { Text("Import Survey JSON") }
             )
         }
     ) { innerPadding ->
@@ -197,7 +180,7 @@ fun SurveyListScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(Strings.importJsonButton(appLanguage), style = MaterialTheme.typography.labelMedium)
+                    Text("Import JSON", style = MaterialTheme.typography.labelMedium)
                 }
 
                 OutlinedButton(
@@ -211,7 +194,7 @@ fun SurveyListScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(Strings.loadPresets(appLanguage), style = MaterialTheme.typography.labelMedium)
+                    Text("View Presets", style = MaterialTheme.typography.labelMedium)
                 }
             }
 
@@ -245,7 +228,7 @@ fun SurveyListScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = Strings.noSurveysTitle(appLanguage),
+                            text = "No questionnaires available",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -253,11 +236,11 @@ fun SurveyListScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = Strings.noSurveysDesc(appLanguage),
+                            text = "Import a questionnaire JSON file or load one of the built-in presets.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -266,12 +249,13 @@ fun SurveyListScreen(
                             onClick = { viewModel.navigateTo(AppScreen.TEMPLATE_SPEC) },
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text(Strings.loadPresets(appLanguage))
+                            Text("View Presets")
                         }
                     }
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag("surveys_lazy_list"),
@@ -284,7 +268,6 @@ fun SurveyListScreen(
                         SurveyCardItem(
                             survey = survey,
                             timesFilled = timesFilled,
-                            appLanguage = appLanguage,
                             onStart = { viewModel.startSurvey(survey) },
                             onDelete = { surveyToDelete = survey }
                         )
@@ -298,14 +281,9 @@ fun SurveyListScreen(
     surveyToDelete?.let { target ->
         AlertDialog(
             onDismissRequest = { surveyToDelete = null },
-            title = { Text(if (appLanguage == AppLanguage.PERSIAN) "حذف پرسشنامه" else "Delete Questionnaire") },
+            title = { Text("Delete Questionnaire") },
             text = {
-                Text(
-                    if (appLanguage == AppLanguage.PERSIAN)
-                        "آیا از حذف پرسشنامه '${target.title}' اطمینان دارید؟ پاسخ‌های ثبت‌شده قبلی در بایگانی حفظ خواهند شد."
-                    else
-                        "Are you sure you want to remove '${target.title}'? Recorded responses in the archive will remain intact."
-                )
+                Text("Are you sure you want to remove '${target.title}'? Recorded responses in the archive will remain intact.")
             },
             confirmButton = {
                 Button(
@@ -315,12 +293,12 @@ fun SurveyListScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(Strings.deleteSurvey(appLanguage))
+                    Text("Delete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { surveyToDelete = null }) {
-                    Text(if (appLanguage == AppLanguage.PERSIAN) "انصراف" else "Cancel")
+                    Text("Cancel")
                 }
             }
         )
@@ -331,10 +309,11 @@ fun SurveyListScreen(
 fun SurveyCardItem(
     survey: SurveyEntity,
     timesFilled: Int,
-    appLanguage: AppLanguage,
     onStart: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val surveyDirection = TextDirectionHelper.getLayoutDirection(survey.title, survey.description)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -348,6 +327,7 @@ fun SurveyCardItem(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
+            // Header row with category badge and times filled
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -372,7 +352,7 @@ fun SurveyCardItem(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = Strings.timesFilled(appLanguage, timesFilled),
+                                text = "Filled $timesFilled times",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -388,7 +368,7 @@ fun SurveyCardItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = Strings.deleteSurvey(appLanguage),
+                            contentDescription = "Delete Questionnaire",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.size(18.dp)
                         )
@@ -398,27 +378,35 @@ fun SurveyCardItem(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(
-                text = survey.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            // Survey Title & Description with RTL auto-detection
+            CompositionLocalProvider(LocalLayoutDirection provides surveyDirection) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = survey.title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-            if (!survey.description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = survey.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                    if (!survey.description.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = survey.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            // Footer row: questions count, estimated time, and start button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -437,7 +425,7 @@ fun SurveyCardItem(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = Strings.questionsCount(appLanguage, survey.questionsCount),
+                            text = "${survey.questionsCount} Questions",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -452,7 +440,7 @@ fun SurveyCardItem(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = Strings.minutes(appLanguage, survey.estimatedMinutes),
+                            text = "~${survey.estimatedMinutes} min",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -472,7 +460,7 @@ fun SurveyCardItem(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = Strings.startSurvey(appLanguage),
+                        text = "Start Survey",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }

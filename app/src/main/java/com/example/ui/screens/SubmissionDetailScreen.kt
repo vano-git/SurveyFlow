@@ -9,10 +9,8 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,7 +49,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -59,8 +57,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -71,8 +69,7 @@ import com.example.model.JsonParser
 import com.example.model.SubmissionRecord
 import com.example.ui.viewmodel.AppScreen
 import com.example.ui.viewmodel.SurveyViewModel
-import com.example.util.AppLanguage
-import com.example.util.Strings
+import com.example.util.TextDirectionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +79,6 @@ fun SubmissionDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val appLanguage by viewModel.appLanguage.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -120,7 +116,7 @@ fun SubmissionDetailScreen(
                 title = {
                     Column {
                         Text(
-                            text = Strings.submissionDetailTitle(appLanguage),
+                            text = "Submission Detail",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                         Text(
@@ -136,7 +132,7 @@ fun SubmissionDetailScreen(
                     IconButton(onClick = { viewModel.navigateTo(AppScreen.HISTORY) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = Strings.previous(appLanguage)
+                            contentDescription = "Back"
                         )
                     }
                 },
@@ -154,7 +150,7 @@ fun SubmissionDetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = Strings.shareJson(appLanguage)
+                            contentDescription = "Share"
                         )
                     }
 
@@ -164,7 +160,7 @@ fun SubmissionDetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = Strings.deleteSubmission(appLanguage),
+                            contentDescription = "Delete Submission",
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
@@ -206,7 +202,7 @@ fun SubmissionDetailScreen(
                             color = MaterialTheme.colorScheme.primary
                         ) {
                             Text(
-                                text = Strings.durationSeconds(appLanguage, record.durationSeconds),
+                                text = "${record.durationSeconds}s duration",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -248,7 +244,7 @@ fun SubmissionDetailScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(Strings.exportSingleJson(appLanguage))
+                            Text("Export JSON File")
                         }
 
                         OutlinedButton(
@@ -268,7 +264,7 @@ fun SubmissionDetailScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(Strings.copyRawJson(appLanguage))
+                            Text("Copy Raw JSON")
                         }
                     }
                 }
@@ -279,12 +275,12 @@ fun SubmissionDetailScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("${Strings.tabResponsesSummary(appLanguage)} (${record.responses.size})") }
+                    text = { Text("Responses Summary (${record.responses.size})") }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text(Strings.tabRawJson(appLanguage)) }
+                    text = { Text("Raw JSON") }
                 )
             }
 
@@ -298,6 +294,8 @@ fun SubmissionDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     record.responses.forEachIndexed { idx, item ->
+                        val itemDirection = TextDirectionHelper.getLayoutDirection(item.questionText, item.answerDisplay)
+
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -330,35 +328,40 @@ fun SubmissionDetailScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
 
-                                Text(
-                                    text = item.questionText,
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                CompositionLocalProvider(LocalLayoutDirection provides itemDirection) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
                                         Text(
-                                            text = "Answer: ",
-                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                        Text(
-                                            text = item.answerDisplay.ifBlank { "(No answer provided)" },
+                                            text = item.questionText,
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "Answer: ",
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                                Text(
+                                                    text = item.answerDisplay.ifBlank { "(No answer provided)" },
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -398,8 +401,8 @@ fun SubmissionDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(Strings.deleteSubmission(appLanguage)) },
-            text = { Text(if (appLanguage == AppLanguage.PERSIAN) "آیا از حذف این پاسخ اطمینان دارید؟" else "Are you sure you want to delete this submission?") },
+            title = { Text("Delete Submission") },
+            text = { Text("Are you sure you want to delete this submission?") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -409,12 +412,12 @@ fun SubmissionDetailScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(Strings.deleteSurvey(appLanguage))
+                    Text("Delete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(if (appLanguage == AppLanguage.PERSIAN) "انصراف" else "Cancel")
+                    Text("Cancel")
                 }
             }
         )

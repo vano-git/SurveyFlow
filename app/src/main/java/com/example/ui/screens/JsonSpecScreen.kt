@@ -9,11 +9,10 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +37,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,7 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -69,8 +68,7 @@ import androidx.compose.ui.unit.sp
 import com.example.model.JsonParser
 import com.example.ui.viewmodel.AppScreen
 import com.example.ui.viewmodel.SurveyViewModel
-import com.example.util.AppLanguage
-import com.example.util.Strings
+import com.example.util.TextDirectionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +77,7 @@ fun JsonSpecScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val appLanguage by viewModel.appLanguage.collectAsState()
+    val scrollState = rememberScrollState()
 
     var jsonInputText by remember { mutableStateOf("") }
     var parseError by remember { mutableStateOf<String?>(null) }
@@ -134,11 +132,11 @@ fun JsonSpecScreen(
                 title = {
                     Column {
                         Text(
-                            text = Strings.presetsTitle(appLanguage),
+                            text = "Presets",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                         )
                         Text(
-                            text = Strings.presetsSubtitle(appLanguage),
+                            text = "Ready-to-use questionnaire templates",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -148,7 +146,7 @@ fun JsonSpecScreen(
                     IconButton(onClick = { viewModel.navigateTo(AppScreen.SURVEYS) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = Strings.previous(appLanguage)
+                            contentDescription = "Back"
                         )
                     }
                 },
@@ -162,17 +160,16 @@ fun JsonSpecScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Section 1: English Sample Preset
             CompactPresetCard(
-                title = Strings.sampleEnTitle(appLanguage),
-                description = Strings.sampleEnDesc(appLanguage),
+                title = "Daily Well-Being (EN)",
+                description = "5-point Likert scale, rating, habits checklist, and reflection (English)",
                 badge = "5-Point Likert • EN",
                 jsonContent = JsonParser.SAMPLE_DAILY_WELLBEING_EN,
-                appLanguage = appLanguage,
                 onLoad = {
                     viewModel.importSurveyFromJson(JsonParser.SAMPLE_DAILY_WELLBEING_EN)
                 },
@@ -182,13 +179,12 @@ fun JsonSpecScreen(
                 }
             )
 
-            // Section 2: Persian Sample Preset
+            // Section 2: Persian Sample Preset (with RTL rendering)
             CompactPresetCard(
-                title = Strings.sampleFaTitle(appLanguage),
-                description = Strings.sampleFaDesc(appLanguage),
+                title = "ارزیابی روزانه سلامت (FA)",
+                description = "پرسشنامه ۵ گزینه‌ای لیکرت به زبان فارسی، وضوح ذهنی و عادات کاری",
                 badge = "لیکرت ۵ گزینه‌ای • فارسی",
                 jsonContent = JsonParser.SAMPLE_DAILY_WELLBEING_FA,
-                appLanguage = appLanguage,
                 onLoad = {
                     viewModel.importSurveyFromJson(JsonParser.SAMPLE_DAILY_WELLBEING_FA)
                 },
@@ -200,7 +196,7 @@ fun JsonSpecScreen(
 
             // Section 3: Custom Questionnaire Header
             Text(
-                text = Strings.customJsonHeader(appLanguage),
+                text = "Custom Questionnaire",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 8.dp)
@@ -221,7 +217,7 @@ fun JsonSpecScreen(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(Strings.importJsonButton(appLanguage), fontWeight = FontWeight.Bold)
+                Text("Import Survey JSON", fontWeight = FontWeight.Bold)
             }
 
             // Expandable Card: Paste Raw JSON
@@ -249,7 +245,7 @@ fun JsonSpecScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = Strings.pasteRawJsonTitle(appLanguage),
+                                text = "Paste & Validate Raw JSON",
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                             )
                         }
@@ -268,8 +264,8 @@ fun JsonSpecScreen(
                                     jsonInputText = it
                                     parseError = null
                                 },
-                                label = { Text(if (appLanguage == AppLanguage.PERSIAN) "متن JSON پرسشنامه" else "Questionnaire JSON") },
-                                placeholder = { Text(if (appLanguage == AppLanguage.PERSIAN) "محتوای JSON را اینجا قرار دهید..." else "Paste JSON object with 'id', 'title', 'questions'...") },
+                                label = { Text("Questionnaire JSON") },
+                                placeholder = { Text("Paste JSON object with 'id', 'title', 'questions'...") },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(180.dp)
@@ -324,7 +320,7 @@ fun JsonSpecScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text(Strings.validateAndImport(appLanguage))
+                                    Text("Validate & Import")
                                 }
 
                                 OutlinedButton(
@@ -340,7 +336,7 @@ fun JsonSpecScreen(
                                     },
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
-                                    Text(if (appLanguage == AppLanguage.PERSIAN) "چسباندن" else "Paste")
+                                    Text("Paste")
                                 }
                             }
                         }
@@ -373,7 +369,7 @@ fun JsonSpecScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = Strings.schemaGuide(appLanguage),
+                                text = "JSON Schema Guide",
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                             )
                         }
@@ -387,10 +383,7 @@ fun JsonSpecScreen(
                     AnimatedVisibility(visible = showSchemaSection) {
                         Column(modifier = Modifier.padding(top = 10.dp)) {
                             Text(
-                                text = if (appLanguage == AppLanguage.PERSIAN)
-                                    "فیلدهای اصلی: id، title، description، category، version، و questions.\nانواع سؤالات: likert، single_choice، multi_choice، rating، slider، boolean، text."
-                                else
-                                    "Required fields: id, title, category, version, and questions array.\nSupported question types: likert (with points & labels), single_choice, multi_choice, rating, slider, boolean, text.",
+                                text = "Required fields: id, title, category, version, and questions array.\nSupported question types: likert (with points & labels), single_choice, multi_choice, rating, slider, boolean, text.\nSupports English (LTR) and Persian (RTL) questionnaires automatically.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -443,11 +436,11 @@ fun CompactPresetCard(
     description: String,
     badge: String,
     jsonContent: String,
-    appLanguage: AppLanguage,
     onLoad: () -> Unit,
     onExport: () -> Unit
 ) {
     val context = LocalContext.current
+    val cardDirection = TextDirectionHelper.getLayoutDirection(title, description)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -462,12 +455,14 @@ fun CompactPresetCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
+                CompositionLocalProvider(LocalLayoutDirection provides cardDirection) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -484,11 +479,14 @@ fun CompactPresetCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            CompositionLocalProvider(LocalLayoutDirection provides cardDirection) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -501,7 +499,7 @@ fun CompactPresetCard(
                     onClick = onLoad,
                     modifier = Modifier.weight(1.3f).height(40.dp),
                     shape = RoundedCornerShape(10.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
@@ -510,7 +508,7 @@ fun CompactPresetCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = Strings.loadIntoSurveys(appLanguage),
+                        text = "Load into Surveys",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         maxLines = 1
                     )
@@ -524,7 +522,7 @@ fun CompactPresetCard(
                     },
                     modifier = Modifier.weight(0.9f).height(40.dp),
                     shape = RoundedCornerShape(10.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
@@ -533,7 +531,7 @@ fun CompactPresetCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = Strings.copyJson(appLanguage),
+                        text = "Copy JSON",
                         style = MaterialTheme.typography.labelMedium,
                         maxLines = 1
                     )
@@ -543,7 +541,7 @@ fun CompactPresetCard(
                     onClick = onExport,
                     modifier = Modifier.weight(0.9f).height(40.dp),
                     shape = RoundedCornerShape(10.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.FileDownload,
@@ -552,7 +550,7 @@ fun CompactPresetCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = Strings.exportTemplate(appLanguage),
+                        text = "Export File",
                         style = MaterialTheme.typography.labelMedium,
                         maxLines = 1
                     )

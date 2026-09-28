@@ -33,6 +33,12 @@ enum class AppScreen {
     TEMPLATE_SPEC
 }
 
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
+}
+
 data class ActiveSurveyState(
     val definition: SurveyDefinition,
     val startedAtIso: String,
@@ -84,21 +90,19 @@ class SurveyViewModel(application: Application) : AndroidViewModel(application) 
     private val _selectedSurveyFilter = MutableStateFlow<String>("ALL")
     val selectedSurveyFilter: StateFlow<String> = _selectedSurveyFilter.asStateFlow()
 
-    private val _appLanguage = MutableStateFlow(
-        if (Locale.getDefault().language.equals("fa", ignoreCase = true)) com.example.util.AppLanguage.PERSIAN else com.example.util.AppLanguage.ENGLISH
-    )
-    val appLanguage: StateFlow<com.example.util.AppLanguage> = _appLanguage.asStateFlow()
+    private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
-    fun toggleLanguage() {
-        _appLanguage.value = if (_appLanguage.value == com.example.util.AppLanguage.ENGLISH) {
-            com.example.util.AppLanguage.PERSIAN
-        } else {
-            com.example.util.AppLanguage.ENGLISH
+    fun toggleTheme() {
+        _themeMode.value = when (_themeMode.value) {
+            ThemeMode.LIGHT -> ThemeMode.DARK
+            ThemeMode.DARK -> ThemeMode.LIGHT
+            ThemeMode.SYSTEM -> ThemeMode.DARK
         }
     }
 
-    fun setLanguage(language: com.example.util.AppLanguage) {
-        _appLanguage.value = language
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
     }
 
     fun navigateTo(screen: AppScreen) {
@@ -195,6 +199,10 @@ class SurveyViewModel(application: Application) : AndroidViewModel(application) 
         } else {
             _activeSurveyState.value = current.copy(showExitConfirm = true)
         }
+    }
+
+    fun promptExitSurvey() {
+        promptCancelSurvey()
     }
 
     fun dismissExitDialog() {

@@ -8,7 +8,6 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,19 +24,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
@@ -58,6 +55,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,19 +64,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.data.db.ResponseEntity
-import com.example.model.JsonParser
 import com.example.ui.viewmodel.SurveyViewModel
-import com.example.util.AppLanguage
-import com.example.util.Strings
+import com.example.util.TextDirectionHelper
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -95,7 +90,7 @@ fun HistoryExportScreen(
     val responses by viewModel.responses.collectAsState()
     val surveys by viewModel.surveys.collectAsState()
     val currentFilter by viewModel.selectedSurveyFilter.collectAsState()
-    val appLanguage by viewModel.appLanguage.collectAsState()
+    val listState = rememberLazyListState()
 
     var showClearAllDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<ResponseEntity?>(null) }
@@ -130,7 +125,7 @@ fun HistoryExportScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = Strings.tabArchive(appLanguage),
+                        text = "Archive",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 },
@@ -152,7 +147,7 @@ fun HistoryExportScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
-                                contentDescription = Strings.shareJson(appLanguage)
+                                contentDescription = "Share All"
                             )
                         }
 
@@ -197,12 +192,12 @@ fun HistoryExportScreen(
                     ) {
                         Column {
                             Text(
-                                text = Strings.totalSavedResponses(appLanguage, responses.size),
+                                text = "${responses.size} local responses recorded",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = if (appLanguage == AppLanguage.PERSIAN) "ذخیره‌سازی کاملاً آفلاین و استاندارد JSON" else "Complete offline JSON persistence",
+                                text = "Complete offline JSON persistence",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -248,7 +243,7 @@ fun HistoryExportScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(Strings.exportConsolidatedJson(appLanguage), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("Export Consolidated JSON", maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
 
                         OutlinedButton(
@@ -273,7 +268,7 @@ fun HistoryExportScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(Strings.copyJson(appLanguage), maxLines = 1)
+                            Text("Copy JSON", maxLines = 1)
                         }
                     }
                 }
@@ -291,7 +286,7 @@ fun HistoryExportScreen(
                         FilterChip(
                             selected = currentFilter == "ALL",
                             onClick = { viewModel.setFilter("ALL") },
-                            label = { Text("${Strings.filterAll(appLanguage)} (${responses.size})") }
+                            label = { Text("All (${responses.size})") }
                         )
                     }
 
@@ -336,7 +331,7 @@ fun HistoryExportScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = Strings.noResponsesTitle(appLanguage),
+                            text = "No responses yet",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -344,15 +339,16 @@ fun HistoryExportScreen(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = Strings.noResponsesDesc(appLanguage),
+                            text = "Complete questionnaires to view, inspect, and export your local submissions.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag("responses_lazy_list"),
@@ -362,7 +358,6 @@ fun HistoryExportScreen(
                     items(filteredList, key = { it.submissionId }) { item ->
                         ResponseListItem(
                             item = item,
-                            appLanguage = appLanguage,
                             onClick = { viewModel.viewSubmission(item) },
                             onDelete = { itemToDelete = item }
                         )
@@ -376,8 +371,8 @@ fun HistoryExportScreen(
     itemToDelete?.let { target ->
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
-            title = { Text(if (appLanguage == AppLanguage.PERSIAN) "حذف این پاسخ" else "Delete Submission") },
-            text = { Text(if (appLanguage == AppLanguage.PERSIAN) "آیا از حذف این رکورد پاسخ اطمینان دارید؟ این عمل غیرقابل بازگشت است." else "Are you sure you want to permanently delete this submission record?") },
+            title = { Text("Delete Submission") },
+            text = { Text("Are you sure you want to permanently delete this submission record?") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -386,12 +381,12 @@ fun HistoryExportScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(Strings.deleteSurvey(appLanguage))
+                    Text("Delete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { itemToDelete = null }) {
-                    Text(if (appLanguage == AppLanguage.PERSIAN) "انصراف" else "Cancel")
+                    Text("Cancel")
                 }
             }
         )
@@ -401,8 +396,8 @@ fun HistoryExportScreen(
     if (showClearAllDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllDialog = false },
-            title = { Text(if (appLanguage == AppLanguage.PERSIAN) "پاکسازی کامل تمام پاسخ‌ها" else "Clear All Submissions") },
-            text = { Text(if (appLanguage == AppLanguage.PERSIAN) "آیا از حذف کلیه پاسخ‌های ثبت‌شده مطمئن هستید؟ این داده‌ها از دستگاه شما به صورت دائمی پاک خواهند شد." else "Are you sure you want to delete all saved survey responses? This action cannot be undone.") },
+            title = { Text("Clear All Submissions") },
+            text = { Text("Are you sure you want to delete all saved survey responses? This action cannot be undone.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -411,12 +406,12 @@ fun HistoryExportScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(if (appLanguage == AppLanguage.PERSIAN) "حذف همه" else "Clear All")
+                    Text("Clear All")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllDialog = false }) {
-                    Text(if (appLanguage == AppLanguage.PERSIAN) "انصراف" else "Cancel")
+                    Text("Cancel")
                 }
             }
         )
@@ -426,10 +421,11 @@ fun HistoryExportScreen(
 @Composable
 fun ResponseListItem(
     item: ResponseEntity,
-    appLanguage: AppLanguage,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val titleDirection = TextDirectionHelper.getLayoutDirection(item.surveyTitle)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -471,13 +467,16 @@ fun ResponseListItem(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Text(
-                    text = item.surveyTitle,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                CompositionLocalProvider(LocalLayoutDirection provides titleDirection) {
+                    Text(
+                        text = item.surveyTitle,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -500,7 +499,7 @@ fun ResponseListItem(
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = Strings.durationSeconds(appLanguage, item.durationSeconds),
+                            text = "${item.durationSeconds}s duration",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -511,7 +510,7 @@ fun ResponseListItem(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = Strings.deleteSurvey(appLanguage),
+                    contentDescription = "Delete Submission",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.size(18.dp)
                 )
@@ -519,7 +518,7 @@ fun ResponseListItem(
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = Strings.viewDetails(appLanguage),
+                contentDescription = "View Details",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )

@@ -10,6 +10,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -27,15 +28,12 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.LayoutDirection
 import com.example.ui.screens.HistoryExportScreen
 import com.example.ui.screens.JsonSpecScreen
 import com.example.ui.screens.SubmissionDetailScreen
@@ -44,8 +42,7 @@ import com.example.ui.screens.SurveyListScreen
 import com.example.ui.theme.SurveyFlowTheme
 import com.example.ui.viewmodel.AppScreen
 import com.example.ui.viewmodel.SurveyViewModel
-import com.example.util.AppLanguage
-import com.example.util.Strings
+import com.example.ui.viewmodel.ThemeMode
 
 class MainActivity : ComponentActivity() {
 
@@ -55,20 +52,22 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val appLanguage by viewModel.appLanguage.collectAsState()
-            val layoutDirection = if (appLanguage == AppLanguage.PERSIAN) LayoutDirection.Rtl else LayoutDirection.Ltr
+            val themeMode by viewModel.themeMode.collectAsState()
+            val isDarkTheme = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
 
-            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-                SurveyFlowTheme {
-                    MainContent(viewModel = viewModel, appLanguage = appLanguage)
-                }
+            SurveyFlowTheme(darkTheme = isDarkTheme) {
+                MainContent(viewModel = viewModel, isDarkTheme = isDarkTheme)
             }
         }
     }
 }
 
 @Composable
-fun MainContent(viewModel: SurveyViewModel, appLanguage: AppLanguage) {
+fun MainContent(viewModel: SurveyViewModel, isDarkTheme: Boolean) {
     val currentScreen by viewModel.currentScreen.collectAsState()
     val activeSurveyState by viewModel.activeSurveyState.collectAsState()
     val selectedSubmission by viewModel.selectedSubmission.collectAsState()
@@ -106,10 +105,10 @@ fun MainContent(viewModel: SurveyViewModel, appLanguage: AppLanguage) {
                         icon = {
                             Icon(
                                 imageVector = if (currentScreen == AppScreen.SURVEYS) Icons.Filled.Assignment else Icons.Outlined.Assignment,
-                                contentDescription = Strings.tabSurveys(appLanguage)
+                                contentDescription = "Surveys"
                             )
                         },
-                        label = { Text(Strings.tabSurveys(appLanguage)) },
+                        label = { Text("Surveys") },
                         modifier = Modifier.testTag("nav_item_surveys")
                     )
 
@@ -119,10 +118,10 @@ fun MainContent(viewModel: SurveyViewModel, appLanguage: AppLanguage) {
                         icon = {
                             Icon(
                                 imageVector = if (currentScreen == AppScreen.HISTORY) Icons.Filled.History else Icons.Outlined.History,
-                                contentDescription = Strings.tabArchive(appLanguage)
+                                contentDescription = "Archive"
                             )
                         },
-                        label = { Text(Strings.tabArchive(appLanguage)) },
+                        label = { Text("Archive") },
                         modifier = Modifier.testTag("nav_item_history")
                     )
 
@@ -132,10 +131,10 @@ fun MainContent(viewModel: SurveyViewModel, appLanguage: AppLanguage) {
                         icon = {
                             Icon(
                                 imageVector = if (currentScreen == AppScreen.TEMPLATE_SPEC) Icons.Filled.Code else Icons.Outlined.Code,
-                                contentDescription = Strings.tabPresets(appLanguage)
+                                contentDescription = "Presets"
                             )
                         },
-                        label = { Text(Strings.tabPresets(appLanguage)) },
+                        label = { Text("Presets") },
                         modifier = Modifier.testTag("nav_item_presets")
                     )
                 }
@@ -151,6 +150,7 @@ fun MainContent(viewModel: SurveyViewModel, appLanguage: AppLanguage) {
                 AppScreen.SURVEYS -> {
                     SurveyListScreen(
                         viewModel = viewModel,
+                        isDarkTheme = isDarkTheme,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -166,6 +166,7 @@ fun MainContent(viewModel: SurveyViewModel, appLanguage: AppLanguage) {
                     } else {
                         SurveyListScreen(
                             viewModel = viewModel,
+                            isDarkTheme = isDarkTheme,
                             modifier = Modifier.padding(innerPadding)
                         )
                     }

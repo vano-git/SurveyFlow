@@ -1,0 +1,67 @@
+name: Build Universal Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Test Universal APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Build Environment
+        run: |
+          chmod +x ./gradlew
+          # Ensure .env file exists for secrets-gradle-plugin
+          if [ ! -f .env ]; then
+            cp .env.example .env || touch .env
+          fi
+          # Restore debug keystore from base64 if present
+          if [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
+
+      - name: Run Unit & Robolectric Tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+
+      - name: Build Universal Debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Package Universal APK
+        run: |
+          mkdir -p output-apk
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk output-apk/SurveyFlow-universal-debug.apk
+          fi
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SurveyFlow-universal-debug-apk
+          path: output-apk/SurveyFlow-universal-debug.apk
+          retention-days: 30
+          if-no-files-found: error

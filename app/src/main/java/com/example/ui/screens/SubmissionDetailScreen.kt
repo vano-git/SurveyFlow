@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -50,6 +51,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +71,8 @@ import com.example.model.JsonParser
 import com.example.model.SubmissionRecord
 import com.example.ui.viewmodel.AppScreen
 import com.example.ui.viewmodel.SurveyViewModel
+import com.example.util.AppLanguage
+import com.example.util.Strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +82,8 @@ fun SubmissionDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val appLanguage by viewModel.appLanguage.collectAsState()
+
     var selectedTab by remember { mutableIntStateOf(0) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -106,74 +112,59 @@ fun SubmissionDetailScreen(
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .navigationBarsPadding(),
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
-                            text = record.surveyTitle,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            text = Strings.submissionDetailTitle(appLanguage),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                         Text(
-                            text = "Submission: ${record.submissionId.take(16)}...",
+                            text = record.surveyTitle,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton(
-                        onClick = { viewModel.navigateTo(AppScreen.HISTORY) },
-                        modifier = Modifier.testTag("detail_back_button")
-                    ) {
+                    IconButton(onClick = { viewModel.navigateTo(AppScreen.HISTORY) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to History"
+                            contentDescription = Strings.previous(appLanguage)
                         )
                     }
                 },
                 actions = {
                     IconButton(
                         onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Survey Response JSON", rawJson))
-                            Toast.makeText(context, "Response JSON copied to clipboard!", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.testTag("copy_json_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy JSON"
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
                             val sendIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "application/json"
-                                putExtra(Intent.EXTRA_SUBJECT, "Survey Response - ${record.surveyTitle}")
                                 putExtra(Intent.EXTRA_TEXT, rawJson)
+                                putExtra(Intent.EXTRA_TITLE, "survey_response_${record.submissionId.take(8)}.json")
                             }
-                            context.startActivity(Intent.createChooser(sendIntent, "Share Survey Response JSON"))
+                            context.startActivity(Intent.createChooser(sendIntent, "Share Response JSON"))
                         },
-                        modifier = Modifier.testTag("share_json_button")
+                        modifier = Modifier.testTag("share_submission_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share Response"
+                            contentDescription = Strings.shareJson(appLanguage)
                         )
                     }
 
                     IconButton(
                         onClick = { showDeleteConfirm = true },
-                        modifier = Modifier.testTag("delete_response_button")
+                        modifier = Modifier.testTag("delete_submission_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Response",
+                            contentDescription = Strings.deleteSubmission(appLanguage),
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
@@ -215,7 +206,7 @@ fun SubmissionDetailScreen(
                             color = MaterialTheme.colorScheme.primary
                         ) {
                             Text(
-                                text = "${record.durationSeconds}s duration",
+                                text = Strings.durationSeconds(appLanguage, record.durationSeconds),
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -257,7 +248,27 @@ fun SubmissionDetailScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export JSON File")
+                            Text(Strings.exportSingleJson(appLanguage))
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Survey Submission JSON", rawJson))
+                                Toast.makeText(context, "JSON copied to clipboard!", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .testTag("copy_json_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(Strings.copyRawJson(appLanguage))
                         }
                     }
                 }
@@ -268,12 +279,12 @@ fun SubmissionDetailScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Response Summary (${record.responses.size})") }
+                    text = { Text("${Strings.tabResponsesSummary(appLanguage)} (${record.responses.size})") }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Raw JSON Object") }
+                    text = { Text(Strings.tabRawJson(appLanguage)) }
                 )
             }
 
@@ -302,30 +313,36 @@ fun SubmissionDetailScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Q${idx + 1} • ${item.questionType.uppercase()}",
+                                        text = "${idx + 1}. ${item.questionId}",
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.primary
                                     )
-                                    if (item.scalePoints != null) {
+
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
                                         Text(
-                                            text = "${item.scalePoints}-point scale",
+                                            text = item.questionType.uppercase(),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
+
                                 Text(
                                     text = item.questionText,
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
 
-                                Spacer(modifier = Modifier.height(10.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
+
                                 Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
                                     shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -334,72 +351,42 @@ fun SubmissionDetailScreen(
                                     ) {
                                         Text(
                                             text = "Answer: ",
-                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                         Text(
-                                            text = item.answerDisplay,
-                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                                            color = MaterialTheme.colorScheme.onSurface
+                                            text = item.answerDisplay.ifBlank { "(No answer provided)" },
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             } else {
-                // Raw JSON syntax view
+                // Raw JSON View
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Formatted JSON Structure",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        OutlinedButton(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Survey Response JSON", rawJson))
-                                Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Copy")
-                        }
-                    }
-
-                    Box(
+                    Surface(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .padding(12.dp)
                             .verticalScroll(rememberScrollState())
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(rememberScrollState()),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
                             text = rawJson,
                             fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(16.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -411,22 +398,23 @@ fun SubmissionDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Response?") },
-            text = { Text("This will permanently remove this response submission from local storage.") },
+            title = { Text(Strings.deleteSubmission(appLanguage)) },
+            text = { Text(if (appLanguage == AppLanguage.PERSIAN) "آیا از حذف این پاسخ اطمینان دارید؟" else "Are you sure you want to delete this submission?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        showDeleteConfirm = false
                         viewModel.deleteResponse(record.submissionId)
+                        showDeleteConfirm = false
+                        viewModel.navigateTo(AppScreen.HISTORY)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete")
+                    Text(Strings.deleteSurvey(appLanguage))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
+                    Text(if (appLanguage == AppLanguage.PERSIAN) "انصراف" else "Cancel")
                 }
             }
         )

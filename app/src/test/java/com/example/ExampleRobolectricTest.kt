@@ -2,10 +2,11 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.example.model.Answer
 import com.example.model.JsonParser
 import com.example.model.QuestionResponseItem
 import com.example.model.SubmissionRecord
+import com.example.util.AppLanguage
+import com.example.util.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -26,8 +27,8 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `parse sample questionnaire successfully`() {
-        val result = JsonParser.parseSurveyDefinition(JsonParser.SAMPLE_DAILY_WELLBEING)
+    fun `parse English sample questionnaire successfully`() {
+        val result = JsonParser.parseSurveyDefinition(JsonParser.SAMPLE_DAILY_WELLBEING_EN)
         assertTrue(result.isSuccess)
         val survey = result.getOrThrow()
         assertEquals("survey_daily_wellbeing", survey.id)
@@ -35,11 +36,31 @@ class ExampleRobolectricTest {
     }
 
     @Test
+    fun `parse Persian sample questionnaire successfully`() {
+        val result = JsonParser.parseSurveyDefinition(JsonParser.SAMPLE_DAILY_WELLBEING_FA)
+        assertTrue(result.isSuccess)
+        val survey = result.getOrThrow()
+        assertEquals("survey_daily_wellbeing_fa", survey.id)
+        assertEquals("ارزیابی روزانه سلامت و تمرکز", survey.title)
+        assertTrue(survey.questions.isNotEmpty())
+    }
+
+    @Test
+    fun `verify localization dictionary`() {
+        assertEquals("سِروِی‌فلو", Strings.appName(AppLanguage.PERSIAN))
+        assertEquals("SurveyFlow", Strings.appName(AppLanguage.ENGLISH))
+        assertEquals("بایگانی", Strings.tabArchive(AppLanguage.PERSIAN))
+        assertEquals("Archive", Strings.tabArchive(AppLanguage.ENGLISH))
+        assertEquals("الگوها", Strings.tabPresets(AppLanguage.PERSIAN))
+        assertEquals("Presets", Strings.tabPresets(AppLanguage.ENGLISH))
+    }
+
+    @Test
     fun `serialize and parse submission roundtrip`() {
         val record = SubmissionRecord(
             submissionId = "sub_test_123",
             surveyId = "survey_daily_wellbeing",
-            surveyTitle = "Daily Well-Being Check-in",
+            surveyTitle = "Daily Well-Being & Focus",
             surveyCategory = "Daily Routine",
             surveyVersion = "1.0",
             startedAt = "2026-09-28T11:00:00Z",

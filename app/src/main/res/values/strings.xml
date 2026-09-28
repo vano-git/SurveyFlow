@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">SurveyFlow</string>
     <string name="tab_surveys">Surveys</string>
-    <string name="tab_history">History &amp; Export</string>
-    <string name="tab_import_spec">Import &amp; Template</string>
+    <string name="tab_archive">Archive</string>
+    <string name="tab_presets">Presets</string>
     <string name="import_survey">Import Survey JSON</string>
     <string name="export_all_responses">Export All Responses</string>
     <string name="no_surveys_yet">No questionnaires loaded yet</string>

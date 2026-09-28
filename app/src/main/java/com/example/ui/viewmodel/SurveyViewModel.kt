@@ -84,6 +84,23 @@ class SurveyViewModel(application: Application) : AndroidViewModel(application) 
     private val _selectedSurveyFilter = MutableStateFlow<String>("ALL")
     val selectedSurveyFilter: StateFlow<String> = _selectedSurveyFilter.asStateFlow()
 
+    private val _appLanguage = MutableStateFlow(
+        if (Locale.getDefault().language.equals("fa", ignoreCase = true)) com.example.util.AppLanguage.PERSIAN else com.example.util.AppLanguage.ENGLISH
+    )
+    val appLanguage: StateFlow<com.example.util.AppLanguage> = _appLanguage.asStateFlow()
+
+    fun toggleLanguage() {
+        _appLanguage.value = if (_appLanguage.value == com.example.util.AppLanguage.ENGLISH) {
+            com.example.util.AppLanguage.PERSIAN
+        } else {
+            com.example.util.AppLanguage.ENGLISH
+        }
+    }
+
+    fun setLanguage(language: com.example.util.AppLanguage) {
+        _appLanguage.value = language
+    }
+
     fun navigateTo(screen: AppScreen) {
         _currentScreen.value = screen
     }

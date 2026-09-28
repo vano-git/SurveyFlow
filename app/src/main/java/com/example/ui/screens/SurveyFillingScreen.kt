@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,6 +47,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,6 +70,8 @@ import com.example.ui.components.SliderSelector
 import com.example.ui.components.TextInputSelector
 import com.example.ui.viewmodel.ActiveSurveyState
 import com.example.ui.viewmodel.SurveyViewModel
+import com.example.util.AppLanguage
+import com.example.util.Strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +80,8 @@ fun SurveyFillingScreen(
     viewModel: SurveyViewModel,
     modifier: Modifier = Modifier
 ) {
+    val appLanguage by viewModel.appLanguage.collectAsState()
+
     BackHandler {
         viewModel.promptCancelSurvey()
     }
@@ -101,8 +109,9 @@ fun SurveyFillingScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "Question ${currentIndex + 1} of $totalCount ($answeredCount answered)",
-                                style = MaterialTheme.typography.labelMedium,
+                                text = Strings.questionCounter(appLanguage, currentIndex + 1, totalCount) +
+                                        " • " + Strings.answeredCount(appLanguage, answeredCount, totalCount),
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -110,11 +119,11 @@ fun SurveyFillingScreen(
                     navigationIcon = {
                         IconButton(
                             onClick = { viewModel.promptCancelSurvey() },
-                            modifier = Modifier.testTag("survey_exit_button")
+                            modifier = Modifier.testTag("exit_survey_icon")
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Exit Survey"
+                                contentDescription = Strings.exit(appLanguage)
                             )
                         }
                     },
@@ -122,12 +131,13 @@ fun SurveyFillingScreen(
                         containerColor = MaterialTheme.colorScheme.surface
                     )
                 )
+
+                // Top Progress indicator
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
-                        .testTag("survey_progress_bar"),
+                        .height(4.dp),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -137,7 +147,11 @@ fun SurveyFillingScreen(
             Surface(
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding() // CRITICAL: keeps buttons above Android system buttons (Back, Home, Recents)
+                    .imePadding()
             ) {
                 Column(
                     modifier = Modifier
@@ -184,7 +198,7 @@ fun SurveyFillingScreen(
                             enabled = !isFirstQuestion,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(48.dp)
+                                .height(50.dp)
                                 .testTag("survey_prev_button")
                         ) {
                             Icon(
@@ -193,7 +207,7 @@ fun SurveyFillingScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Previous")
+                            Text(Strings.previous(appLanguage), fontWeight = FontWeight.SemiBold)
                         }
 
                         Spacer(modifier = Modifier.width(12.dp))
@@ -203,7 +217,7 @@ fun SurveyFillingScreen(
                                 onClick = { viewModel.submitSurvey() },
                                 modifier = Modifier
                                     .weight(1.3f)
-                                    .height(48.dp)
+                                    .height(50.dp)
                                     .testTag("survey_submit_button"),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary
@@ -215,17 +229,17 @@ fun SurveyFillingScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Submit Survey", fontWeight = FontWeight.Bold)
+                                Text(Strings.submitSurvey(appLanguage), fontWeight = FontWeight.Bold)
                             }
                         } else {
                             Button(
                                 onClick = { viewModel.nextQuestion() },
                                 modifier = Modifier
                                     .weight(1.3f)
-                                    .height(48.dp)
+                                    .height(50.dp)
                                     .testTag("survey_next_button")
                             ) {
-                                Text("Next")
+                                Text(Strings.next(appLanguage), fontWeight = FontWeight.SemiBold)
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -252,12 +266,14 @@ fun SurveyFillingScreen(
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    shape = RoundedCornerShape(12.dp),
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -266,11 +282,12 @@ fun SurveyFillingScreen(
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = state.validationMessage ?: "",
+                            text = Strings.answerRequiredAlert(appLanguage),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -278,70 +295,57 @@ fun SurveyFillingScreen(
                 }
             }
 
-            // Question Card
+            // Question Header Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("active_question_card"),
+                    .padding(bottom = 16.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
-                ) {
-                    // Question badges
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "Question ${currentIndex + 1}",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                text = Strings.questionCounter(appLanguage, currentIndex + 1, totalCount),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
 
                         if (currentQuestion.required) {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
-                                    text = "Required",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    text = Strings.requiredField(appLanguage),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                                     color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
                             }
                         } else {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant
-                            ) {
-                                Text(
-                                    text = "Optional",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
+                            Text(
+                                text = Strings.optionalField(appLanguage),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // Question Text
                     Text(
                         text = currentQuestion.text,
                         style = MaterialTheme.typography.titleLarge.copy(
@@ -359,109 +363,122 @@ fun SurveyFillingScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Input Widget based on type
-                    when (currentQuestion.type) {
-                        QuestionType.LIKERT -> {
-                            val config = currentQuestion.likertConfig ?: LikertScaleConfig(5)
-                            LikertSelector(
-                                config = config,
-                                currentAnswer = state.answers[currentQuestion.id] as? Answer.Likert,
-                                onAnswerSelected = { answer ->
-                                    viewModel.setAnswer(currentQuestion.id, answer)
-                                }
-                            )
-                        }
-
-                        QuestionType.SINGLE_CHOICE -> {
-                            SingleChoiceSelector(
-                                options = currentQuestion.options,
-                                currentAnswer = state.answers[currentQuestion.id] as? Answer.SingleChoice,
-                                onAnswerSelected = { answer ->
-                                    viewModel.setAnswer(currentQuestion.id, answer)
-                                }
-                            )
-                        }
-
-                        QuestionType.MULTI_CHOICE -> {
-                            MultiChoiceSelector(
-                                options = currentQuestion.options,
-                                currentAnswer = state.answers[currentQuestion.id] as? Answer.MultiChoice,
-                                onAnswerSelected = { answer ->
-                                    viewModel.setAnswer(currentQuestion.id, answer)
-                                }
-                            )
-                        }
-
-                        QuestionType.RATING -> {
-                            RatingSelector(
-                                minRating = currentQuestion.minRating,
-                                maxRating = currentQuestion.maxRating,
-                                currentAnswer = state.answers[currentQuestion.id] as? Answer.Rating,
-                                onAnswerSelected = { answer ->
-                                    viewModel.setAnswer(currentQuestion.id, answer)
-                                }
-                            )
-                        }
-
-                        QuestionType.SLIDER -> {
-                            SliderSelector(
-                                min = currentQuestion.sliderMin,
-                                max = currentQuestion.sliderMax,
-                                step = currentQuestion.sliderStep,
-                                unit = currentQuestion.sliderUnit,
-                                currentAnswer = state.answers[currentQuestion.id] as? Answer.Slider,
-                                onAnswerSelected = { answer ->
-                                    viewModel.setAnswer(currentQuestion.id, answer)
-                                }
-                            )
-                        }
-
-                        QuestionType.BOOLEAN -> {
-                            BooleanSelector(
-                                currentAnswer = state.answers[currentQuestion.id] as? Answer.BooleanAnswer,
-                                onAnswerSelected = { answer ->
-                                    viewModel.setAnswer(currentQuestion.id, answer)
-                                }
-                            )
-                        }
-
-                        QuestionType.TEXT -> {
-                            TextInputSelector(
-                                placeholder = currentQuestion.placeholder,
-                                currentAnswer = state.answers[currentQuestion.id] as? Answer.Text,
-                                onAnswerSelected = { answer ->
-                                    viewModel.setAnswer(currentQuestion.id, answer)
-                                }
-                            )
-                        }
-                    }
                 }
             }
+
+            // Input / Scale Answer Section
+            val currentAnswer = state.answers[currentQuestion.id]
+
+            when (currentQuestion.type) {
+                QuestionType.LIKERT -> {
+                    // Provide default Persian labels if Persian language and questionnaire hasn't defined custom labels
+                    val likertConfig = currentQuestion.likertConfig ?: LikertScaleConfig(points = 5)
+                    val resolvedConfig = if (appLanguage == AppLanguage.PERSIAN && likertConfig.labels.isEmpty()) {
+                        if (likertConfig.points == 7) {
+                            likertConfig.copy(labels = Strings.LIKERT_7_FA)
+                        } else {
+                            likertConfig.copy(labels = Strings.LIKERT_5_FA)
+                        }
+                    } else {
+                        likertConfig
+                    }
+
+                    LikertSelector(
+                        config = resolvedConfig,
+                        currentAnswer = currentAnswer as? Answer.Likert,
+                        onAnswerSelected = { ans ->
+                            viewModel.setAnswer(currentQuestion.id, ans)
+                        }
+                    )
+                }
+
+                QuestionType.SINGLE_CHOICE -> {
+                    SingleChoiceSelector(
+                        options = currentQuestion.options,
+                        currentAnswer = currentAnswer as? Answer.SingleChoice,
+                        onAnswerSelected = { ans ->
+                            viewModel.setAnswer(currentQuestion.id, ans)
+                        }
+                    )
+                }
+
+                QuestionType.MULTI_CHOICE -> {
+                    MultiChoiceSelector(
+                        options = currentQuestion.options,
+                        currentAnswer = currentAnswer as? Answer.MultiChoice,
+                        onAnswerSelected = { ans ->
+                            viewModel.setAnswer(currentQuestion.id, ans)
+                        }
+                    )
+                }
+
+                QuestionType.RATING -> {
+                    RatingSelector(
+                        minRating = currentQuestion.minRating,
+                        maxRating = currentQuestion.maxRating,
+                        currentAnswer = currentAnswer as? Answer.Rating,
+                        onAnswerSelected = { ans ->
+                            viewModel.setAnswer(currentQuestion.id, ans)
+                        }
+                    )
+                }
+
+                QuestionType.SLIDER -> {
+                    SliderSelector(
+                        min = currentQuestion.sliderMin,
+                        max = currentQuestion.sliderMax,
+                        step = currentQuestion.sliderStep,
+                        unit = currentQuestion.sliderUnit,
+                        currentAnswer = currentAnswer as? Answer.Slider,
+                        onAnswerSelected = { ans ->
+                            viewModel.setAnswer(currentQuestion.id, ans)
+                        }
+                    )
+                }
+
+                QuestionType.BOOLEAN -> {
+                    BooleanSelector(
+                        currentAnswer = currentAnswer as? Answer.BooleanAnswer,
+                        onAnswerSelected = { ans ->
+                            viewModel.setAnswer(currentQuestion.id, ans)
+                        },
+                        yesLabel = Strings.yes(appLanguage),
+                        noLabel = Strings.no(appLanguage)
+                    )
+                }
+
+                QuestionType.TEXT -> {
+                    TextInputSelector(
+                        placeholder = currentQuestion.placeholder ?: if (appLanguage == AppLanguage.PERSIAN) "پاسخ خود را اینجا بنویسید..." else "Type your response here...",
+                        currentAnswer = currentAnswer as? Answer.Text,
+                        onAnswerSelected = { ans ->
+                            viewModel.setAnswer(currentQuestion.id, ans)
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
-    // Exit Confirmation Dialog
+    // Cancel prompt dialog
     if (state.showExitConfirm) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissExitDialog() },
-            title = { Text("Discard Survey?") },
-            text = { Text("You have answered ${state.answers.size} questions. Exiting now will discard your current responses.") },
+            title = { Text(Strings.exitSurveyPromptTitle(appLanguage)) },
+            text = { Text(Strings.exitSurveyPromptDesc(appLanguage)) },
             confirmButton = {
                 Button(
                     onClick = { viewModel.confirmExitSurvey() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Discard & Exit")
+                    Text(Strings.exit(appLanguage))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissExitDialog() }) {
-                    Text("Continue Survey")
+                    Text(Strings.keepEditing(appLanguage))
                 }
             }
         )

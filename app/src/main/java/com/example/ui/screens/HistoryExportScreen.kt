@@ -28,13 +28,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AssignmentTurnedIn
-import androidx.compose.material.icons.filled.ClearAll
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -70,7 +75,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.db.ResponseEntity
+import com.example.model.JsonParser
 import com.example.ui.viewmodel.SurveyViewModel
+import com.example.util.AppLanguage
+import com.example.util.Strings
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -87,6 +95,7 @@ fun HistoryExportScreen(
     val responses by viewModel.responses.collectAsState()
     val surveys by viewModel.surveys.collectAsState()
     val currentFilter by viewModel.selectedSurveyFilter.collectAsState()
+    val appLanguage by viewModel.appLanguage.collectAsState()
 
     var showClearAllDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<ResponseEntity?>(null) }
@@ -121,7 +130,7 @@ fun HistoryExportScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Response Archive",
+                        text = Strings.tabArchive(appLanguage),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 },
@@ -133,17 +142,17 @@ fun HistoryExportScreen(
                                     val batchJson = viewModel.getBatchExportJson(if (currentFilter == "ALL") null else currentFilter)
                                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
                                         type = "application/json"
-                                        putExtra(Intent.EXTRA_SUBJECT, "Exported Survey Responses JSON")
                                         putExtra(Intent.EXTRA_TEXT, batchJson)
+                                        putExtra(Intent.EXTRA_TITLE, "survey_responses_export.json")
                                     }
-                                    context.startActivity(Intent.createChooser(sendIntent, "Share All Responses JSON"))
+                                    context.startActivity(Intent.createChooser(sendIntent, "Share JSON Submissions"))
                                 }
                             },
-                            modifier = Modifier.testTag("share_batch_button")
+                            modifier = Modifier.testTag("share_all_button")
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
-                                contentDescription = "Share Batch JSON"
+                                contentDescription = Strings.shareJson(appLanguage)
                             )
                         }
 
@@ -152,8 +161,8 @@ fun HistoryExportScreen(
                             modifier = Modifier.testTag("clear_all_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ClearAll,
-                                contentDescription = "Clear All Responses",
+                                imageVector = Icons.Default.DeleteSweep,
+                                contentDescription = "Clear All",
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -170,16 +179,15 @@ fun HistoryExportScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Stats & Export Header Banner
+            // Header Card with Batch Export Actions
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -189,30 +197,50 @@ fun HistoryExportScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Total Submissions",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = Strings.totalSavedResponses(appLanguage, responses.size),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "${responses.size} Records",
-                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.primary
+                                text = if (appLanguage == AppLanguage.PERSIAN) "ذخیره‌سازی کاملاً آفلاین و استاندارد JSON" else "Complete offline JSON persistence",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Archive,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Button(
                             onClick = {
-                                val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
-                                val filename = "survey_responses_${timestamp}.json"
-                                exportBatchLauncher.launch(filename)
+                                val timeStamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
+                                exportBatchLauncher.launch("survey_responses_$timeStamp.json")
                             },
                             enabled = responses.isNotEmpty(),
                             modifier = Modifier
+                                .weight(1.2f)
                                 .height(44.dp)
-                                .testTag("export_all_json_button"),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
+                                .testTag("export_batch_button"),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.FileDownload,
@@ -220,46 +248,65 @@ fun HistoryExportScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export JSON")
+                            Text(Strings.exportConsolidatedJson(appLanguage), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    val batchJson = viewModel.getBatchExportJson(if (currentFilter == "ALL") null else currentFilter)
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Survey Submissions JSON", batchJson))
+                                    Toast.makeText(context, "Consolidated JSON copied to clipboard!", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            enabled = responses.isNotEmpty(),
+                            modifier = Modifier
+                                .weight(0.8f)
+                                .height(44.dp)
+                                .testTag("copy_batch_json_button"),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(Strings.copyJson(appLanguage), maxLines = 1)
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "Encrypted in local offline Room SQLite store. Formats every submission into clean standard JSON with UUIDs and UTC timestamps.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
-            // Survey Filter Chips (if multiple surveys exist)
-            if (surveys.size > 1) {
+            // Survey Filter Chips (if more than 1 survey exists)
+            if (surveys.size > 1 && responses.isNotEmpty()) {
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
                         FilterChip(
                             selected = currentFilter == "ALL",
                             onClick = { viewModel.setFilter("ALL") },
-                            label = { Text("All Surveys (${responses.size})") }
+                            label = { Text("${Strings.filterAll(appLanguage)} (${responses.size})") }
                         )
                     }
-                    items(surveys) { s ->
-                        val count = responses.count { it.surveyId == s.id }
+
+                    items(surveys, key = { it.id }) { survey ->
+                        val surveyResponsesCount = responses.count { it.surveyId == survey.id }
                         FilterChip(
-                            selected = currentFilter == s.id,
-                            onClick = { viewModel.setFilter(s.id) },
-                            label = { Text("${s.title.take(18)} ($count)") }
+                            selected = currentFilter == survey.id,
+                            onClick = { viewModel.setFilter(survey.id) },
+                            label = { Text("${survey.title.take(16)}... ($surveyResponsesCount)") }
                         )
                     }
                 }
             }
 
-            // Responses List
+            // Submissions List or Empty State
             if (filteredList.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -271,131 +318,66 @@ fun HistoryExportScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.size(72.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.AssignmentTurnedIn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(36.dp)
-                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
                         }
+
                         Spacer(modifier = Modifier.height(16.dp))
+
                         Text(
-                            text = "No survey responses recorded yet",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            text = Strings.noResponsesTitle(appLanguage),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
+
                         Spacer(modifier = Modifier.height(6.dp))
+
                         Text(
-                            text = "Choose any questionnaire from the Surveys tab and complete it to see records here.",
+                            text = Strings.noResponsesDesc(appLanguage),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("responses_lazy_list"),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(filteredList, key = { it.submissionId }) { item ->
-                        val dateFormatted = remember(item.timestamp) {
-                            SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault()).format(Date(item.timestamp))
-                        }
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .clickable { viewModel.viewSubmission(item) }
-                                .testTag("submission_card_${item.submissionId.take(6)}"),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primaryContainer),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AssignmentTurnedIn,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = item.surveyTitle,
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = dateFormatted,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "${item.answeredCount}/${item.totalCount} questions • ${item.durationSeconds}s duration",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = { itemToDelete = item }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete",
-                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                                    )
-                                }
-
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowRight,
-                                    contentDescription = "View detail",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                        ResponseListItem(
+                            item = item,
+                            appLanguage = appLanguage,
+                            onClick = { viewModel.viewSubmission(item) },
+                            onDelete = { itemToDelete = item }
+                        )
                     }
                 }
             }
         }
     }
 
-    // Delete Single Response Confirm Dialog
+    // Delete single response confirmation
     itemToDelete?.let { target ->
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
-            title = { Text("Delete Response?") },
-            text = { Text("Are you sure you want to remove this submission from your local archive?") },
+            title = { Text(if (appLanguage == AppLanguage.PERSIAN) "حذف این پاسخ" else "Delete Submission") },
+            text = { Text(if (appLanguage == AppLanguage.PERSIAN) "آیا از حذف این رکورد پاسخ اطمینان دارید؟ این عمل غیرقابل بازگشت است." else "Are you sure you want to permanently delete this submission record?") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -404,39 +386,143 @@ fun HistoryExportScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete")
+                    Text(Strings.deleteSurvey(appLanguage))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { itemToDelete = null }) {
-                    Text("Cancel")
+                    Text(if (appLanguage == AppLanguage.PERSIAN) "انصراف" else "Cancel")
                 }
             }
         )
     }
 
-    // Clear All Dialog
+    // Clear all responses confirmation
     if (showClearAllDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllDialog = false },
-            title = { Text("Clear All Responses?") },
-            text = { Text("This will permanently delete all ${responses.size} saved survey responses. This action cannot be undone.") },
+            title = { Text(if (appLanguage == AppLanguage.PERSIAN) "پاکسازی کامل تمام پاسخ‌ها" else "Clear All Submissions") },
+            text = { Text(if (appLanguage == AppLanguage.PERSIAN) "آیا از حذف کلیه پاسخ‌های ثبت‌شده مطمئن هستید؟ این داده‌ها از دستگاه شما به صورت دائمی پاک خواهند شد." else "Are you sure you want to delete all saved survey responses? This action cannot be undone.") },
             confirmButton = {
                 Button(
                     onClick = {
-                        showClearAllDialog = false
                         viewModel.clearAllResponses()
+                        showClearAllDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Clear All")
+                    Text(if (appLanguage == AppLanguage.PERSIAN) "حذف همه" else "Clear All")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllDialog = false }) {
-                    Text("Cancel")
+                    Text(if (appLanguage == AppLanguage.PERSIAN) "انصراف" else "Cancel")
                 }
             }
         )
+    }
+}
+
+@Composable
+fun ResponseListItem(
+    item: ResponseEntity,
+    appLanguage: AppLanguage,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .testTag("response_item_${item.submissionId}"),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = item.surveyCategory,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = item.completedAt.replace("T", " ").replace("Z", ""),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = item.surveyTitle,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "${item.answeredCount} / ${item.totalCount} answered",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = Strings.durationSeconds(appLanguage, item.durationSeconds),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = Strings.deleteSurvey(appLanguage),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = Strings.viewDetails(appLanguage),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }

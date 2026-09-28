@@ -1,0 +1,68 @@
+{
+  "id": "survey_daily_wellbeing_en",
+  "title": "Daily Well-Being & Focus Check-in",
+  "description": "Daily self-reflection measuring mental clarity, ergonomic comfort, and productivity.",
+  "category": "Daily Routine",
+  "version": "1.0",
+  "estimatedMinutes": 2,
+  "questions": [
+    {
+      "id": "q1_energy",
+      "text": "I felt energetic and motivated throughout my day.",
+      "type": "likert",
+      "required": true,
+      "scale": {
+        "points": 5,
+        "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
+      }
+    },
+    {
+      "id": "q2_focus",
+      "text": "I was able to maintain uninterrupted deep focus on my primary tasks.",
+      "type": "likert",
+      "required": true,
+      "scale": {
+        "points": 5,
+        "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
+      }
+    },
+    {
+      "id": "q3_ergonomics",
+      "text": "My workstation posture and seating felt comfortable without physical strain.",
+      "type": "likert",
+      "required": true,
+      "scale": {
+        "points": 5,
+        "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
+      }
+    },
+    {
+      "id": "q4_breaks",
+      "text": "Did you take intentional screen breaks away from your device today?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5_rating",
+      "text": "Overall rating of your day's work satisfaction:",
+      "type": "rating",
+      "required": true,
+      "minRating": 1,
+      "maxRating": 5
+    },
+    {
+      "id": "q6_boosters",
+      "text": "Which habits contributed positively to your day?",
+      "type": "multi_choice",
+      "required": false,
+      "options": ["Hydration", "Morning Walk", "Music / Ambient Noise", "Healthy Meals", "Pomodoro Sessions", "Stretching"]
+    },
+    {
+      "id": "q7_notes",
+      "text": "Any reflections or challenges from today?",
+      "type": "text",
+      "required": false,
+      "placeholder": "Reflect on highlights, blockers, or ideas..."
+    }
+  ]
+}

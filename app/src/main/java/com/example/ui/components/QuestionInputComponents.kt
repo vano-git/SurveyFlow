@@ -262,7 +262,9 @@ fun SliderSelector(
 fun BooleanSelector(
     currentAnswer: Answer.BooleanAnswer?,
     onAnswerSelected: (Answer.BooleanAnswer) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    yesLabel: String = "Yes",
+    noLabel: String = "No"
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -301,7 +303,7 @@ fun BooleanSelector(
                     Spacer(modifier = Modifier.width(6.dp))
                 }
                 Text(
-                    text = "Yes",
+                    text = yesLabel,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = if (isYes) FontWeight.Bold else FontWeight.Normal,
                         color = if (isYes) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
@@ -340,7 +342,7 @@ fun BooleanSelector(
                     Spacer(modifier = Modifier.width(6.dp))
                 }
                 Text(
-                    text = "No",
+                    text = noLabel,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = if (isNo) FontWeight.Bold else FontWeight.Normal,
                         color = if (isNo) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface

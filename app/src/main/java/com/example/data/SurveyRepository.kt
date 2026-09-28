@@ -80,10 +80,9 @@ class SurveyRepository(private val dao: SurveyDao) {
     suspend fun prepopulateSamplesIfNeeded() {
         val count = dao.getSurveyCount()
         if (count == 0) {
-            // Import default samples so the app is immediately full and ready to test
-            importSurveyFromJson(JsonParser.SAMPLE_DAILY_WELLBEING)
-            importSurveyFromJson(JsonParser.SAMPLE_ERGONOMICS_SURVEY)
-            importSurveyFromJson(JsonParser.SAMPLE_SYSTEM_USABILITY_SCALE)
+            // Import default samples (1 English, 1 Persian)
+            importSurveyFromJson(JsonParser.SAMPLE_DAILY_WELLBEING_EN)
+            importSurveyFromJson(JsonParser.SAMPLE_DAILY_WELLBEING_FA)
         }
     }
 

@@ -276,11 +276,11 @@ object JsonParser {
         }
     }
 
-    // Built-in Sample JSON Questionnaires
-    val SAMPLE_DAILY_WELLBEING = """
+    // Built-in Sample JSON Questionnaires (Reduced to 2: English and Persian)
+    val SAMPLE_DAILY_WELLBEING_EN = """
 {
   "id": "survey_daily_wellbeing",
-  "title": "Daily Well-Being & Focus Check-in",
+  "title": "Daily Well-Being & Focus",
   "description": "Daily self-reflection measuring mental clarity, ergonomic comfort, and productivity.",
   "category": "Daily Routine",
   "version": "1.0",
@@ -348,141 +348,74 @@ object JsonParser {
 }
 """.trimIndent()
 
-    val SAMPLE_ERGONOMICS_SURVEY = """
+    val SAMPLE_DAILY_WELLBEING = SAMPLE_DAILY_WELLBEING_EN
+
+    val SAMPLE_DAILY_WELLBEING_FA = """
 {
-  "id": "survey_workplace_ergonomics",
-  "title": "Workplace Ergonomics & Health Evaluation",
-  "description": "Comprehensive physical ergonomics assessment with 7-point Likert scales.",
-  "category": "Health & Safety",
-  "version": "1.2",
-  "estimatedMinutes": 3,
+  "id": "survey_daily_wellbeing_fa",
+  "title": "ارزیابی روزانه سلامت و تمرکز",
+  "description": "پرسشنامه خودارزیابی روزانه شامل بررسی انرژی، وضوح ذهنی، ارگونومی و رضایت شغلی.",
+  "category": "برنامه روزانه",
+  "version": "1.0",
+  "estimatedMinutes": 2,
   "questions": [
     {
-      "id": "ergo_q1",
-      "text": "My chair provides adequate lumbar and lower back support during long sessions.",
+      "id": "fa_q1_energy",
+      "text": "در طول روز احساس انرژی، انگیزه و نشاط کافی برای انجام امور داشتم.",
       "type": "likert",
       "required": true,
       "scale": {
-        "points": 7,
-        "labels": ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"]
+        "points": 5,
+        "labels": ["کاملاً مخالف", "مخالف", "خنثی / ممتنع", "موافق", "کاملاً موافق"]
       }
     },
     {
-      "id": "ergo_q2",
-      "text": "My monitor display is set at natural eye-level without causing neck tilt.",
+      "id": "fa_q2_focus",
+      "text": "توانستم تمرکز عمیق و پیوسته روی وظایف اصلی و کاری خود را حفظ کنم.",
       "type": "likert",
       "required": true,
       "scale": {
-        "points": 7,
-        "labels": ["Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"]
+        "points": 5,
+        "labels": ["کاملاً مخالف", "مخالف", "خنثی / ممتنع", "موافق", "کاملاً موافق"]
       }
     },
     {
-      "id": "ergo_q3",
-      "text": "Do you experience wrist, shoulder, or neck stiffness after working?",
-      "type": "single_choice",
+      "id": "fa_q3_ergonomics",
+      "text": "وضعیت صندلی و ارگونومی میز کار در طول روز بدون خستگی و فشار بدنی بود.",
+      "type": "likert",
       "required": true,
-      "options": ["Never", "Rarely", "Occasionally", "Frequently", "Constantly"]
+      "scale": {
+        "points": 5,
+        "labels": ["کاملاً مخالف", "مخالف", "خنثی / ممتنع", "موافق", "کاملاً موافق"]
+      }
     },
     {
-      "id": "ergo_q4",
-      "text": "Daily hours spent sitting at your desk:",
-      "type": "slider",
-      "required": true,
-      "sliderMin": 1,
-      "sliderMax": 14,
-      "sliderStep": 1,
-      "sliderUnit": "hours"
+      "id": "fa_q4_breaks",
+      "text": "آیا امروز استراحت‌های کوتاه و منظم دور از صفحه نمایش داشتید؟",
+      "type": "boolean",
+      "required": true
     },
     {
-      "id": "ergo_q5",
-      "text": "Requested ergonomic improvements or accessories:",
+      "id": "fa_q5_satisfaction",
+      "text": "میزان رضایت کلی از دستاوردهای روزانه:",
+      "type": "rating",
+      "required": true,
+      "minRating": 1,
+      "maxRating": 5
+    },
+    {
+      "id": "fa_q6_habits",
+      "text": "کدام عادت‌ها به بهره‌وری و حال خوب شما در روز کمک کردند؟",
+      "type": "multi_choice",
+      "required": false,
+      "options": ["نوشیدن آب کافی", "پیاده‌روی صبحگاهی", "موسیقی آرامش‌بخش", "تغذیه سالم", "روش پومودورو", "حرکات کششی"]
+    },
+    {
+      "id": "fa_q7_notes",
+      "text": "یادداشت یا نکته‌ای از تجربیات و دستاوردهای امروز:",
       "type": "text",
       "required": false,
-      "placeholder": "e.g. Footrest, vertical mouse, standing desk converter..."
-    }
-  ]
-}
-""".trimIndent()
-
-    val SAMPLE_SYSTEM_USABILITY_SCALE = """
-{
-  "id": "survey_system_usability_scale",
-  "title": "System Usability Scale (SUS) Assessment",
-  "description": "The standardized 10-item industry standard Likert survey for evaluating ease of use.",
-  "category": "UX & Usability",
-  "version": "2.0",
-  "estimatedMinutes": 3,
-  "questions": [
-    {
-      "id": "sus_1",
-      "text": "I think that I would like to use this system frequently.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_2",
-      "text": "I found the system unnecessarily complex.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_3",
-      "text": "I thought the system was easy to use.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_4",
-      "text": "I think that I would need the support of a technical person to be able to use this system.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_5",
-      "text": "I found the various functions in this system were well integrated.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_6",
-      "text": "I thought there was too much inconsistency in this system.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_7",
-      "text": "I would imagine that most people would learn to use this system very quickly.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_8",
-      "text": "I found the system very cumbersome to use.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_9",
-      "text": "I felt very confident using the system.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
-    },
-    {
-      "id": "sus_10",
-      "text": "I needed to learn a lot of things before I could get going with this system.",
-      "type": "likert",
-      "required": true,
-      "scale": { "points": 5 }
+      "placeholder": "نکات مثبت، موانع یا پیشنهادات خود را بنویسید..."
     }
   ]
 }

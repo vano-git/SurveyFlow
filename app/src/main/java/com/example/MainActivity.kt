@@ -27,12 +27,15 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.LayoutDirection
 import com.example.ui.screens.HistoryExportScreen
 import com.example.ui.screens.JsonSpecScreen
 import com.example.ui.screens.SubmissionDetailScreen
@@ -41,6 +44,8 @@ import com.example.ui.screens.SurveyListScreen
 import com.example.ui.theme.SurveyFlowTheme
 import com.example.ui.viewmodel.AppScreen
 import com.example.ui.viewmodel.SurveyViewModel
+import com.example.util.AppLanguage
+import com.example.util.Strings
 
 class MainActivity : ComponentActivity() {
 
@@ -50,15 +55,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            SurveyFlowTheme {
-                MainContent(viewModel = viewModel)
+            val appLanguage by viewModel.appLanguage.collectAsState()
+            val layoutDirection = if (appLanguage == AppLanguage.PERSIAN) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+                SurveyFlowTheme {
+                    MainContent(viewModel = viewModel, appLanguage = appLanguage)
+                }
             }
         }
     }
 }
 
 @Composable
-fun MainContent(viewModel: SurveyViewModel) {
+fun MainContent(viewModel: SurveyViewModel, appLanguage: AppLanguage) {
     val currentScreen by viewModel.currentScreen.collectAsState()
     val activeSurveyState by viewModel.activeSurveyState.collectAsState()
     val selectedSubmission by viewModel.selectedSubmission.collectAsState()
@@ -96,10 +106,10 @@ fun MainContent(viewModel: SurveyViewModel) {
                         icon = {
                             Icon(
                                 imageVector = if (currentScreen == AppScreen.SURVEYS) Icons.Filled.Assignment else Icons.Outlined.Assignment,
-                                contentDescription = "Surveys"
+                                contentDescription = Strings.tabSurveys(appLanguage)
                             )
                         },
-                        label = { Text("Surveys") },
+                        label = { Text(Strings.tabSurveys(appLanguage)) },
                         modifier = Modifier.testTag("nav_item_surveys")
                     )
 
@@ -109,10 +119,10 @@ fun MainContent(viewModel: SurveyViewModel) {
                         icon = {
                             Icon(
                                 imageVector = if (currentScreen == AppScreen.HISTORY) Icons.Filled.History else Icons.Outlined.History,
-                                contentDescription = "Archive & Export"
+                                contentDescription = Strings.tabArchive(appLanguage)
                             )
                         },
-                        label = { Text("Archive & Export") },
+                        label = { Text(Strings.tabArchive(appLanguage)) },
                         modifier = Modifier.testTag("nav_item_history")
                     )
 
@@ -122,10 +132,10 @@ fun MainContent(viewModel: SurveyViewModel) {
                         icon = {
                             Icon(
                                 imageVector = if (currentScreen == AppScreen.TEMPLATE_SPEC) Icons.Filled.Code else Icons.Outlined.Code,
-                                contentDescription = "JSON & Presets"
+                                contentDescription = Strings.tabPresets(appLanguage)
                             )
                         },
-                        label = { Text("JSON & Presets") },
+                        label = { Text(Strings.tabPresets(appLanguage)) },
                         modifier = Modifier.testTag("nav_item_presets")
                     )
                 }
@@ -154,7 +164,6 @@ fun MainContent(viewModel: SurveyViewModel) {
                             modifier = Modifier
                         )
                     } else {
-                        // Fallback if null
                         SurveyListScreen(
                             viewModel = viewModel,
                             modifier = Modifier.padding(innerPadding)

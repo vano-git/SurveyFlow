@@ -138,23 +138,6 @@ fun SubmissionDetailScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = {
-                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "application/json"
-                                putExtra(Intent.EXTRA_TEXT, rawJson)
-                                putExtra(Intent.EXTRA_TITLE, "survey_response_${record.submissionId.take(8)}.json")
-                            }
-                            context.startActivity(Intent.createChooser(sendIntent, "Share Response JSON"))
-                        },
-                        modifier = Modifier.testTag("share_submission_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share"
-                        )
-                    }
-
-                    IconButton(
                         onClick = { showDeleteConfirm = true },
                         modifier = Modifier.testTag("delete_submission_button")
                     ) {
@@ -224,48 +207,24 @@ fun SubmissionDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Button(
+                        onClick = {
+                            val filename = "response_${record.surveyId}_${record.submissionId.take(8)}.json"
+                            exportFileLauncher.launch(filename)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .testTag("export_file_button"),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                val filename = "response_${record.surveyId}_${record.submissionId.take(8)}.json"
-                                exportFileLauncher.launch(filename)
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp)
-                                .testTag("export_file_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.FileDownload,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export JSON File")
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Survey Submission JSON", rawJson))
-                                Toast.makeText(context, "JSON copied to clipboard!", Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp)
-                                .testTag("copy_json_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Copy Raw JSON")
-                        }
+                        Icon(
+                            imageVector = Icons.Default.FileDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Export JSON File", fontWeight = FontWeight.Bold)
                     }
                 }
             }

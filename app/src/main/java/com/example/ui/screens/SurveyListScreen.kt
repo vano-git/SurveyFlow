@@ -83,26 +83,6 @@ fun SurveyListScreen(
 
     var surveyToDelete by remember { mutableStateOf<SurveyEntity?>(null) }
 
-    // File picker launcher for JSON questionnaires
-    val importFileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            try {
-                val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader().use {
-                    it?.readText()
-                }
-                if (!jsonString.isNullOrBlank()) {
-                    viewModel.importSurveyFromJson(jsonString)
-                } else {
-                    Toast.makeText(context, "Selected file is empty", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Failed to read file: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -132,28 +112,10 @@ fun SurveyListScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-
-                    IconButton(
-                        onClick = { viewModel.navigateTo(AppScreen.TEMPLATE_SPEC) },
-                        modifier = Modifier.testTag("open_spec_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PostAdd,
-                            contentDescription = "Presets"
-                        )
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { importFileLauncher.launch(arrayOf("application/json", "text/*")) },
-                modifier = Modifier.testTag("import_json_fab"),
-                icon = { Icon(Icons.Default.FileUpload, contentDescription = null) },
-                text = { Text("Import Survey JSON") }
             )
         }
     ) { innerPadding ->
@@ -162,42 +124,6 @@ fun SurveyListScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Quick action ribbon
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { importFileLauncher.launch(arrayOf("application/json", "text/*")) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FileUpload,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Import JSON", style = MaterialTheme.typography.labelMedium)
-                }
-
-                OutlinedButton(
-                    onClick = { viewModel.navigateTo(AppScreen.TEMPLATE_SPEC) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Quiz,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("View Presets", style = MaterialTheme.typography.labelMedium)
-                }
-            }
-
             if (surveys.isEmpty()) {
                 // Empty state
                 Box(

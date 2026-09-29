@@ -132,26 +132,6 @@ fun HistoryExportScreen(
                 actions = {
                     if (responses.isNotEmpty()) {
                         IconButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    val batchJson = viewModel.getBatchExportJson(if (currentFilter == "ALL") null else currentFilter)
-                                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "application/json"
-                                        putExtra(Intent.EXTRA_TEXT, batchJson)
-                                        putExtra(Intent.EXTRA_TITLE, "survey_responses_export.json")
-                                    }
-                                    context.startActivity(Intent.createChooser(sendIntent, "Share JSON Submissions"))
-                                }
-                            },
-                            modifier = Modifier.testTag("share_all_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "Share All"
-                            )
-                        }
-
-                        IconButton(
                             onClick = { showClearAllDialog = true },
                             modifier = Modifier.testTag("clear_all_button")
                         ) {
@@ -221,55 +201,25 @@ fun HistoryExportScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Button(
+                        onClick = {
+                            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
+                            exportBatchLauncher.launch("survey_responses_$timeStamp.json")
+                        },
+                        enabled = responses.isNotEmpty(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .testTag("export_batch_button"),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                val timeStamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
-                                exportBatchLauncher.launch("survey_responses_$timeStamp.json")
-                            },
-                            enabled = responses.isNotEmpty(),
-                            modifier = Modifier
-                                .weight(1.2f)
-                                .height(44.dp)
-                                .testTag("export_batch_button"),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.FileDownload,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export Consolidated JSON", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    val batchJson = viewModel.getBatchExportJson(if (currentFilter == "ALL") null else currentFilter)
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Survey Submissions JSON", batchJson))
-                                    Toast.makeText(context, "Consolidated JSON copied to clipboard!", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            enabled = responses.isNotEmpty(),
-                            modifier = Modifier
-                                .weight(0.8f)
-                                .height(44.dp)
-                                .testTag("copy_batch_json_button"),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Copy JSON", maxLines = 1)
-                        }
+                        Icon(
+                            imageVector = Icons.Default.FileDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Export Consolidated JSON", fontWeight = FontWeight.Bold)
                     }
                 }
             }

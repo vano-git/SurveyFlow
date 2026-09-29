@@ -30,10 +30,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timer
@@ -161,42 +163,22 @@ fun HistoryExportScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "${responses.size} local responses recorded",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = "Complete offline JSON persistence",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Archive,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
+                    Column {
+                        Text(
+                            text = "${responses.size} Local Responses Recorded",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Offline SQLite persistence with one-touch consolidated JSON export",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -224,29 +206,74 @@ fun HistoryExportScreen(
                 }
             }
 
-            // Survey Filter Chips (if more than 1 survey exists)
-            if (surveys.size > 1 && responses.isNotEmpty()) {
-                LazyRow(
+            // Redesigned Survey Filter Section
+            if (responses.isNotEmpty()) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
-                    item {
-                        FilterChip(
-                            selected = currentFilter == "ALL",
-                            onClick = { viewModel.setFilter("ALL") },
-                            label = { Text("All (${responses.size})") }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Filter Submissions",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
-                    items(surveys, key = { it.id }) { survey ->
-                        val surveyResponsesCount = responses.count { it.surveyId == survey.id }
-                        FilterChip(
-                            selected = currentFilter == survey.id,
-                            onClick = { viewModel.setFilter(survey.id) },
-                            label = { Text("${survey.title.take(16)}... ($surveyResponsesCount)") }
-                        )
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item {
+                            val isAllSelected = currentFilter == "ALL"
+                            FilterChip(
+                                selected = isAllSelected,
+                                onClick = { viewModel.setFilter("ALL") },
+                                leadingIcon = if (isAllSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null,
+                                label = {
+                                    Text(
+                                        text = "All (${responses.size})",
+                                        fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                        }
+
+                        items(surveys, key = { it.id }) { survey ->
+                            val surveyResponsesCount = responses.count { it.surveyId == survey.id }
+                            val isSelected = currentFilter == survey.id
+                            val surveyDirection = TextDirectionHelper.getLayoutDirection(survey.title)
+                            CompositionLocalProvider(LocalLayoutDirection provides surveyDirection) {
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { viewModel.setFilter(survey.id) },
+                                    leadingIcon = if (isSelected) {
+                                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                    } else null,
+                                    label = {
+                                        Text(
+                                            text = "${survey.title} ($surveyResponsesCount)",
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    },
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
